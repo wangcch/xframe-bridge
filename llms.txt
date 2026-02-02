@@ -1,0 +1,184 @@
+# XFrame Bridge
+
+> A protocol-based bridge for iframe cross-window communication.
+
+- Repo: https://github.com/wangcch/xframe-bridge
+- Package: xframe-bridge
+- Version: 1.0.0
+
+## Overview
+
+XFrame Bridge provides type-safe, promise-based communication between parent windows and iframes using the postMessage API. It supports request-response patterns, events, and channel-based isolation.
+
+## Installation
+
+```bash
+npm install xframe-bridge
+```
+
+## API Quick Reference
+
+| Function | Description |
+|----------|-------------|
+| `createParentBridge(iframe, options?)` | Create bridge in parent window |
+| `createChildBridge(options?)` | Create bridge in iframe |
+| `bridge.request(method, data?)` | Send request, returns Promise |
+| `bridge.on(method, handler)` | Register request handler |
+| `bridge.emit(event, data?)` | Send one-way event |
+| `bridge.listen(event, handler)` | Listen to events |
+| `bridge.off(event, handler?)` | Remove event listener |
+| `bridge.channel(name)` | Create isolated channel |
+| `bridge.destroy()` | Cleanup and destroy |
+
+## Core Concepts
+
+### 1. Bridge Creation
+
+```typescript
+// In parent window
+import { createParentBridge } from 'xframe-bridge';
+const bridge = createParentBridge(iframeElement, options);
+
+// In iframe (child window)
+import { createChildBridge } from 'xframe-bridge';
+const bridge = createChildBridge(options);
+```
+
+### 2. Options
+
+```typescript
+interface BridgeOptions {
+  targetOrigin?: string;  // Security: specify allowed origin (default: '*')
+  timeout?: number;       // Request timeout in ms (default: 30000)
+  debug?: boolean;        // Enable console logging (default: false)
+}
+```
+
+### 3. Request-Response Pattern
+
+```typescript
+// Register handler (receiver side)
+bridge.on('methodName', async (data) => {
+  return { result: 'response data' };
+});
+
+// Send request (sender side)
+const response = await bridge.request('methodName', { param: 'value' });
+```
+
+### 4. Events (One-way)
+
+```typescript
+// Listen for events
+bridge.listen('eventName', (data) => {
+  console.log('Event received:', data);
+});
+
+// Emit event
+bridge.emit('eventName', { payload: 'data' });
+
+// Remove listener
+bridge.off('eventName', handler);  // Remove specific
+bridge.off('eventName');           // Remove all
+```
+
+### 5. Channels (Namespace Isolation)
+
+```typescript
+const userChannel = bridge.channel('user');
+const dataChannel = bridge.channel('data');
+
+// Channels are isolated - same method names won't conflict
+userChannel.on('get', () => ({ type: 'user' }));
+dataChannel.on('get', () => ({ type: 'data' }));
+
+await userChannel.request('get');  // { type: 'user' }
+await dataChannel.request('get');  // { type: 'data' }
+```
+
+### 6. Cleanup
+
+```typescript
+bridge.destroy();  // Removes listeners, rejects pending requests
+```
+
+## Message Protocol
+
+Internal message structure (for debugging):
+
+```typescript
+interface Message {
+  __protocol__: '__XFRAME_BRIDGE__';  // Protocol identifier
+  id: string;                          // Unique message ID
+  type: 'REQUEST' | 'RESPONSE' | 'EVENT' | 'ERROR';
+  method?: string;                     // Method or event name
+  channel?: string;                    // Channel name (optional)
+  data?: any;                          // Payload
+  error?: string;                      // Error message (if type is ERROR)
+  timestamp: number;                   // Unix timestamp
+}
+```
+
+## Common Patterns
+
+### Parent-Child Communication
+
+```typescript
+// Parent
+const bridge = createParentBridge(iframe, { targetOrigin: childOrigin });
+bridge.on('getConfig', () => ({ theme: 'dark' }));
+bridge.listen('childReady', () => console.log('Child loaded'));
+
+// Child
+const bridge = createChildBridge({ targetOrigin: parentOrigin });
+const config = await bridge.request('getConfig');
+bridge.emit('childReady', { timestamp: Date.now() });
+```
+
+### Multi-Module Communication
+
+```typescript
+// Separate concerns with channels
+const auth = bridge.channel('auth');
+const api = bridge.channel('api');
+const ui = bridge.channel('ui');
+
+auth.on('login', handleLogin);
+api.on('fetch', handleFetch);
+ui.listen('themeChange', updateTheme);
+```
+
+### Error Handling
+
+```typescript
+try {
+  const result = await bridge.request('riskyMethod', data);
+} catch (error) {
+  // Handles: timeout, handler errors, bridge destroyed
+  console.error(error.message);
+}
+```
+
+## Security Notes
+
+1. Always set `targetOrigin` in production (never use `'*'`)
+2. Validate data received from the other side
+3. The protocol identifier prevents pollution from other postMessage sources
+
+## TypeScript Support
+
+Full TypeScript support with generics:
+
+```typescript
+interface UserData { id: number; name: string; }
+interface UserResponse { success: boolean; }
+
+bridge.on<UserData>('createUser', (data) => {
+  return { success: true };
+});
+
+const result = await bridge.request<UserData, UserResponse>('createUser', {
+  id: 1,
+  name: 'John'
+});
+```
