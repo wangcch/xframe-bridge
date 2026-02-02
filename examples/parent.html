@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XFrame Bridge - Parent Example</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --background: 0 0% 100%;
+      --foreground: 240 10% 3.9%;
+      --card: 0 0% 100%;
+      --card-foreground: 240 10% 3.9%;
+      --primary: 240 5.9% 10%;
+      --primary-foreground: 0 0% 98%;
+      --secondary: 240 4.8% 95.9%;
+      --secondary-foreground: 240 5.9% 10%;
+      --muted: 240 4.8% 95.9%;
+      --muted-foreground: 240 3.8% 46.1%;
+      --accent: 240 4.8% 95.9%;
+      --accent-foreground: 240 5.9% 10%;
+      --border: 240 5.9% 90%;
+      --input: 240 5.9% 90%;
+      --ring: 240 5.9% 10%;
+      --radius: 0.5rem;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: hsl(var(--background));
+      color: hsl(var(--foreground));
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      margin: 0;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      height: 100vh;
+    }
+
+    .left-panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .right-panel {
+      border-left: 1px solid hsl(var(--border));
+      display: flex;
+      flex-direction: column;
+      background: hsl(var(--muted));
+      min-height: 0;
+    }
+
+    .header {
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid hsl(var(--border));
+    }
+
+    .container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 1.5rem 2rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.025em;
+    }
+
+    .subtitle {
+      color: hsl(var(--muted-foreground));
+      font-size: 0.875rem;
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background: hsl(var(--card));
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      flex-shrink: 0;
+    }
+
+    .card-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: calc(var(--radius) - 2px);
+      font-size: 0.875rem;
+      font-weight: 500;
+      height: 2.5rem;
+      padding: 0 1rem;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .button-primary {
+      background: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+    }
+
+    .button-primary:hover {
+      opacity: 0.9;
+    }
+
+    .button-secondary {
+      background: hsl(var(--secondary));
+      color: hsl(var(--secondary-foreground));
+    }
+
+    .button-secondary:hover {
+      background: hsl(var(--accent));
+    }
+
+    .input-group {
+      display: flex;
+      gap: 0.5rem;
+      width: 100%;
+    }
+
+    .input {
+      flex: 1;
+      height: 2.5rem;
+      border-radius: calc(var(--radius) - 2px);
+      border: 1px solid hsl(var(--input));
+      background: hsl(var(--background));
+      padding: 0 0.75rem;
+      font-size: 0.875rem;
+      transition: border-color 0.2s;
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: hsl(var(--ring));
+      box-shadow: 0 0 0 2px hsla(var(--ring) / 0.2);
+    }
+
+    .input::placeholder {
+      color: hsl(var(--muted-foreground));
+    }
+
+    .iframe-container {
+      flex: 1;
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      overflow: hidden;
+      min-height: 400px;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
+    .output-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem;
+      min-height: 0;
+    }
+
+    .output-header {
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: hsl(var(--foreground));
+    }
+
+    #output {
+      flex: 1;
+      background: hsl(var(--background));
+      border-radius: var(--radius);
+      padding: 1rem;
+      overflow-y: auto;
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 0.8125rem;
+      min-height: 0;
+      max-height: 100%;
+    }
+
+    .output-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    .log {
+      padding: 0.5rem;
+      margin-bottom: 0.25rem;
+      border-radius: calc(var(--radius) - 4px);
+      background: hsl(var(--background));
+      border-left: 2px solid hsl(var(--primary));
+    }
+
+    .log.error {
+      border-left-color: hsl(0 84.2% 60.2%);
+      color: hsl(0 84.2% 60.2%);
+    }
+
+    .timestamp {
+      color: hsl(var(--muted-foreground));
+      font-size: 0.75rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="layout">
+    <div class="left-panel">
+      <div class="header">
+        <h1>🌉 XFrame Bridge - Parent Window</h1>
+        <p class="subtitle">Demonstrates iframe communication between parent and child windows</p>
+      </div>
+
+      <div class="container">
+        <div class="card">
+          <h3 class="card-title">Controls</h3>
+          <div class="controls">
+            <button class="button button-primary" id="sendMessage">Send Message</button>
+            <button class="button button-primary" id="requestData">Request Data</button>
+            <button class="button button-primary" id="emitEvent">Emit Event</button>
+          </div>
+          <div class="input-group">
+            <input class="input" type="text" id="customInput" placeholder="Enter custom message...">
+            <button class="button button-secondary" id="sendCustom">Send Custom</button>
+          </div>
+        </div>
+
+        <div class="iframe-container">
+          <iframe id="childFrame" src="./child.html"></iframe>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="output-panel">
+        <div class="output-header">Output</div>
+        <div id="output"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createParentBridge } from '../src/index.ts';
+
+    const iframe = document.getElementById('childFrame');
+    const output = document.getElementById('output');
+
+    let bridge;
+
+    function log(message, isError = false) {
+      const logDiv = document.createElement('div');
+      logDiv.className = isError ? 'log error' : 'log';
+      const timestamp = new Date().toLocaleTimeString();
+      logDiv.innerHTML = `<span class="timestamp">${timestamp}</span> ${message}`;
+      output.appendChild(logDiv);
+      output.scrollTop = output.scrollHeight;
+    }
+
+    // Wait for iframe to load
+    iframe.addEventListener('load', () => {
+      try {
+        // Create bridge with debug enabled
+        bridge = createParentBridge(iframe, {
+          targetOrigin: window.location.origin,
+          timeout: 5000,
+          debug: true
+        });
+
+        log('✅ Bridge created successfully');
+
+        // Register request handlers
+        bridge.on('getParentInfo', () => {
+          log('📥 Child requested parent info');
+          return {
+            url: window.location.href,
+            title: document.title,
+            timestamp: Date.now()
+          };
+        });
+
+        bridge.on('calculate', (data) => {
+          log(`📥 Child requested calculation: ${data.a} + ${data.b}`);
+          return { result: data.a + data.b };
+        });
+
+        // Listen to events from child
+        bridge.listen('childReady', (data) => {
+          log(`📢 Child is ready: ${JSON.stringify(data)}`);
+        });
+
+        bridge.listen('childEvent', (data) => {
+          log(`📢 Child event received: ${JSON.stringify(data)}`);
+        });
+
+        setupControls();
+      } catch (error) {
+        log(`❌ Error: ${error.message}`, true);
+      }
+    });
+
+    function setupControls() {
+      document.getElementById('sendMessage').addEventListener('click', async () => {
+        try {
+          const response = await bridge.request('greet', { name: 'Parent' });
+          log(`✅ Response: ${JSON.stringify(response)}`);
+        } catch (error) {
+          log(`❌ Error: ${error.message}`, true);
+        }
+      });
+
+      document.getElementById('requestData').addEventListener('click', async () => {
+        try {
+          const response = await bridge.request('getData');
+          log(`✅ Data received: ${JSON.stringify(response)}`);
+        } catch (error) {
+          log(`❌ Error: ${error.message}`, true);
+        }
+      });
+
+      document.getElementById('emitEvent').addEventListener('click', () => {
+        bridge.emit('parentEvent', { message: 'Hello from parent!', timestamp: Date.now() });
+        log('📤 Event emitted to child');
+      });
+
+      document.getElementById('sendCustom').addEventListener('click', async () => {
+        const input = document.getElementById('customInput');
+        if (!input.value) return;
+
+        try {
+          const response = await bridge.request('echo', { message: input.value });
+          log(`✅ Echo response: ${JSON.stringify(response)}`);
+          input.value = '';
+        } catch (error) {
+          log(`❌ Error: ${error.message}`, true);
+        }
+      });
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      if (bridge) {
+        bridge.destroy();
+      }
+    });
+  </script>
+</body>
+
+</html>
